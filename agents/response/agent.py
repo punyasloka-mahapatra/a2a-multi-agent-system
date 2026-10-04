@@ -1,8 +1,17 @@
-from common.a2a import A2AMessage
-from common.config import RESPONSE_MODEL
+from common.a2a import (
+    A2AMessage,
+    send_message
+)
+
+from common.config import (
+    RESPONSE_MODEL,
+    EVALUATOR_URL
+)
+
 from common.llm import LLM
 
 from .memory import ResponseMemory
+from .tools import clean_response
 
 
 class ResponseAgent:
@@ -12,7 +21,7 @@ class ResponseAgent:
     def __init__(self):
 
         self.llm = LLM(
-            model=RESPONSE_MODEL
+            RESPONSE_MODEL
         )
 
         self.memory = ResponseMemory()
@@ -32,64 +41,125 @@ class ResponseAgent:
             "category"
         ]
 
+        policy = data[
+            "policy"
+        ]
+
         resolution = data[
             "resolution"
         ]
 
-        print(
-            f"[{self.name}] "
-            f"Generating final response"
+        retry_count = data.get(
+            "retry_count",
+            0
+        )
+
+        feedback = data.get(
+            "feedback"
+        )
+
+        previous_response = data.get(
+            "previous_response"
         )
 
         system_prompt = """
 You are a professional customer support agent.
 
-Write a helpful, polite and concise response.
+Generate a concise, helpful and polite
+customer-facing response.
 
-Do NOT mention:
+STRICT RULES:
 
-- AI
-- agents
-- classification
-- internal processing
-- prompts
-- orchestration
-
-Respond directly to the customer.
-
-Do not invent company policies.
-
-Use only the information provided.
+1. Follow the supplied policy.
+2. Follow the recommended resolution.
+3. Never invent company policies.
+4. Never guarantee refunds or replacements
+   unless explicitly verified.
+5. Never invent order, shipping or warranty data.
+6. Do not mention AI, agents, prompts,
+   evaluation or internal processing.
 """
 
         user_prompt = f"""
-Customer message:
+CUSTOMER MESSAGE:
 
 {customer_message}
 
-Issue category:
+CATEGORY:
 
 {category}
 
-Recommended resolution:
+POLICY:
+
+{policy}
+
+RECOMMENDED RESOLUTION:
 
 {resolution}
-
-Write the final customer response.
 """
 
-        final_response = await self.llm.generate(
+        if feedback:
+
+            user_prompt += f"""
+
+PREVIOUS RESPONSE:
+
+{previous_response}
+
+EVALUATOR FEEDBACK:
+
+{feedback}
+
+Rewrite the response and correct every issue
+identified by the evaluator.
+"""
+
+        response = await self.llm.generate(
             system_prompt,
             user_prompt
         )
 
-        self.memory.save(
-            task_id=message.task_id,
-            response=final_response
+        response = clean_response(
+            response
         )
 
-        return {
+        self.memory.save({
             "task_id": message.task_id,
-            "message_type": "final_response",
-            "response": final_response
-        }
+            "retry": retry_count,
+            "response": response
+        })
+
+        print(
+            f"[RESPONSE] Attempt {retry_count + 1}"
+        )
+
+        evaluation_message = A2AMessage(
+            task_id=message.task_id,
+            sender=self.name,
+            receiver="evaluator_agent",
+            message_type="evaluation_request",
+            payload={
+                "customer_message":
+                    customer_message,
+
+                "category":
+                    category,
+
+                "policy":
+                    policy,
+
+                "resolution":
+                    resolution,
+
+                "response":
+                    response,
+
+                "retry_count":
+                    retry_count
+            }
+        )
+
+        return await send_message(
+            EVALUATOR_URL,
+            evaluation_message
+        )

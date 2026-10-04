@@ -11,26 +11,24 @@ from common.config import CLASSIFIER_URL
 
 async def run():
 
+    print()
     print("=" * 70)
-    print("       A2A MULTI-AGENT CUSTOMER SUPPORT")
+    print("       A2A SELF-EVALUATING MULTI-AGENT SYSTEM")
     print("=" * 70)
 
     customer_message = input(
         "\nEnter customer complaint:\n> "
     )
 
-    task_id = str(uuid.uuid4())
+    task_id = str(
+        uuid.uuid4()
+    )
 
     print(
         f"\nTask ID: {task_id}"
     )
 
-    print(
-        "\nCustomer"
-        " → Classifier Agent"
-    )
-
-    message = A2AMessage(
+    initial_message = A2AMessage(
         task_id=task_id,
         sender="customer",
         receiver="classifier_agent",
@@ -40,35 +38,36 @@ async def run():
 
     result = await send_message(
         CLASSIFIER_URL,
-        message
+        initial_message
     )
 
-    print("\n")
+    print()
     print("=" * 70)
-    print("                    FINAL RESPONSE")
+    print("                     RESULT")
     print("=" * 70)
+
+    print(
+        f"\nStatus: {result['status']}"
+    )
+
+    print(
+        f"Evaluation Score: {result['score']}"
+    )
+
+    print(
+        f"Attempts: {result['attempts']}"
+    )
+
+    print("\nFinal Response:\n")
+
+    print(
+        result["response"]
+    )
 
     print()
 
-    if isinstance(result, dict):
-
-        print(
-            result.get(
-                "response",
-                result
-            )
-        )
-
-    else:
-
-        print(result)
-
-    print()
-    print("=" * 70)
-    print("                    TASK COMPLETE")
     print("=" * 70)
 
 
 if __name__ == "__main__":
-
     asyncio.run(run())

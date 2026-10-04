@@ -9,7 +9,6 @@ env/
 
 data/*/memory.json
 
+.DS_Store
 .idea/
 .vscode/
-
-.DS_Store

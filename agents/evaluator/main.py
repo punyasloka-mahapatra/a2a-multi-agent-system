@@ -5,14 +5,14 @@ from common.a2a import (
     A2AResponse
 )
 
-from .agent import ResponseAgent
+from .agent import EvaluatorAgent
 
 
 app = FastAPI(
-    title="Response Agent"
+    title="Evaluator Agent"
 )
 
-agent = ResponseAgent()
+agent = EvaluatorAgent()
 
 
 @app.get("/")
@@ -29,18 +29,19 @@ async def agent_card():
 
     return {
         "protocolVersion": "1.0.0",
-        "name": "Response Agent",
+        "name": "Evaluator Agent",
         "description":
-            "Generates customer-facing responses.",
+            "Evaluates and improves agent responses.",
         "url":
-            "http://localhost:8003/a2a",
+            "http://localhost:8004/a2a",
         "preferredTransport": "JSONRPC",
         "skills": [
             {
-                "id": "respond",
-                "name": "Response Generation",
+                "id": "evaluate",
+                "name": "Response Evaluation",
                 "description":
-                    "Generates customer responses."
+                    "Evaluates response quality, "
+                    "groundedness and policy compliance."
             }
         ]
     }

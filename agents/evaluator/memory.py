@@ -1,9 +1,9 @@
 from common.memory import JSONMemory
 
 
-class ResponseMemory(JSONMemory):
+class EvaluatorMemory(JSONMemory):
 
     def __init__(self):
         super().__init__(
-            "data/response/memory.json"
+            "data/evaluator/memory.json"
         )
